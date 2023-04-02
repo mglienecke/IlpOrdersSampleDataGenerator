@@ -27,8 +27,8 @@ public class IlpRestService {
      * load the orders from the JSON file and return the deserialized version
      * @return an array of orders from the file
      */
-    private OrderWithOutcome[] getOrders(){
-        return new Gson().fromJson(new BufferedReader(new InputStreamReader(Objects.requireNonNull(getClass().getClassLoader().getResourceAsStream("json/orders.json")))), OrderWithOutcome[].class);
+    private Order[] getOrders(){
+        return new Gson().fromJson(new BufferedReader(new InputStreamReader(Objects.requireNonNull(getClass().getClassLoader().getResourceAsStream("json/orders.json")))), Order[].class);
     }
 
     /**
