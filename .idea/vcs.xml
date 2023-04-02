@@ -3,6 +3,7 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/IlpDataObjects" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/IlpOrdersSampleDataGenerator" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/MyPizzaDronz" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/PizzaDronz" vcs="Git" />
   </component>
