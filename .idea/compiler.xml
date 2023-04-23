@@ -13,12 +13,5 @@
         <module name="IlpRestServer" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="IlpDataObjects" target="18" />
-      <module name="IlpOrdersSampleDataGenerator" target="18" />
-      <module name="IlpRestServer" target="18" />
-      <module name="IlpRestTest" target="18" />
-      <module name="PizzaDronz" target="18" />
-    </bytecodeTargetLevel>
   </component>
 </project>

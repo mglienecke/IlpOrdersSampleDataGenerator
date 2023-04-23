@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import uk.ac.ed.inf.ilp.constant.OrderStatus;
 import uk.ac.ed.inf.ilp.data.*;
 
 import java.io.BufferedReader;
@@ -32,7 +33,7 @@ public class IlpRestService {
     }
 
     /**
-     * returns sample orders (some of them invalid) from a template JSON file. The order outcome is removed
+     * returns sample orders (some of them invalid) from a template JSON file. The order outcome is removed and UNDEFINED preset
      *
      * @param orderDate optional date in the format YYYY-MM-DD to find orders matching just the date
      * @return an array of orders
@@ -43,12 +44,12 @@ public class IlpRestService {
 
         var orders = getOrders();
         if (orderDate != null){
-            result.addAll(Arrays.stream(orders).filter(o -> o.orderDate.equals(orderDate)).map(o -> new Order(o.orderNo, o.orderDate, o.customer, o.creditCardNumber, o.creditCardExpiry, o.cvv, o.priceTotalInPence, o.orderItems.clone())).toList());
+            result.addAll(Arrays.stream(orders).filter(o -> o.getOrderDate().equals(orderDate)).toList());
         } else {
-            for (var o  : orders){
-                result.add(new Order(o.orderNo, o.orderDate, o.customer, o.creditCardNumber, o.creditCardExpiry, o.cvv, o.priceTotalInPence, o.orderItems.clone()));
-            }
+            result.addAll(Arrays.stream(orders).toList());
         }
+
+        result.forEach(o -> o.setOrderStatus(OrderStatus.UNDEFINED));
         return result.toArray(new Order[0]);
     }
 
@@ -60,16 +61,16 @@ public class IlpRestService {
      * @return an array of orders
      */
     @GetMapping(value = {"/ordersWithOutcome/{orderDate}", "/ordersWithOutcome"})
-    public OrderWithOutcome[] ordersWithOutcome(@PathVariable(required = false) String orderDate) {
-        List<OrderWithOutcome> result;
+    public Order[] ordersWithOutcome(@PathVariable(required = false) String orderDate) {
+        List<Order> result;
 
         var orders = getOrders();
         if (orderDate != null){
-            result = new ArrayList<>(Arrays.stream(orders).filter(o -> o.orderDate.equals(orderDate)).toList());
+            result = new ArrayList<>(Arrays.stream(orders).filter(o -> o.getOrderDate().equals(orderDate)).toList());
         } else {
             result = new ArrayList<>(List.of(orders));
         }
-        return result.toArray(new OrderWithOutcome[0]);
+        return result.toArray(new Order[0]);
     }
 
 
@@ -80,8 +81,8 @@ public class IlpRestService {
      * @return the order details or HTTP 404 if not found
      */
     @GetMapping("/orders/{orderNo}/details")
-    public OrderWithOutcome orderDetails(@PathVariable String orderNo){
-        var currentOrder = Arrays.stream(getOrders()).filter(o -> o.orderNo.equals(orderNo)).findFirst();
+    public Order orderDetails(@PathVariable String orderNo){
+        var currentOrder = Arrays.stream(getOrders()).filter(o -> o.getOrderNo().equals(orderNo)).findFirst();
         if (currentOrder.isPresent() == false){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "order not found");
         }
@@ -92,13 +93,13 @@ public class IlpRestService {
     /**
      * check if the order outcome provided matches the JSON definition
      * @param orderNo is the order no to be checked. If no or an invalid number is passed false is returned
-     * @param outcomeToCheck the outcome which should be checked
+     * @param statusToCheck the status which should be checked
      * @return true if the outcome is according to the JSON definition, otherwise (or if the order was not found) then not
      */
-    @GetMapping("/orders/{orderNo}/isOrderOutcomeValid/{outcomeToCheck}")
-    public Boolean isOrderOutcomeValid(@PathVariable String orderNo, @PathVariable OrderOutcome outcomeToCheck){
-        var currentOrder = Arrays.stream(getOrders()).filter(o -> o.orderNo.equals(orderNo)).findFirst();
-        return currentOrder.filter(orderWithOutcome -> orderWithOutcome.orderOutcome == outcomeToCheck).isPresent();
+    @GetMapping("/orders/{orderNo}/isOrderOutcomeValid/{statusToCheck}")
+    public Boolean isOrderOutcomeValid(@PathVariable String orderNo, @PathVariable OrderStatus statusToCheck){
+        var currentOrder = Arrays.stream(getOrders()).filter(o -> o.getOrderNo().equals(orderNo)).findFirst();
+        return currentOrder.filter(orderWithOutcome -> orderWithOutcome.getOrderStatus() == statusToCheck).isPresent();
     }
 
     /**
@@ -106,13 +107,13 @@ public class IlpRestService {
      * @param orderNo the order to search
      * @return the order outcome or HTTP 404 if not found
      */
-    @GetMapping("/orders/{orderNo}/outcome")
-    public OrderOutcome orderOutcome(@PathVariable String orderNo){
-        var currentOrder = Arrays.stream(getOrders()).filter(o -> o.orderNo.equals(orderNo)).findFirst();
+    @GetMapping("/orders/{orderNo}/status")
+    public OrderStatus orderOutcome(@PathVariable String orderNo){
+        var currentOrder = Arrays.stream(getOrders()).filter(o -> o.getOrderNo().equals(orderNo)).findFirst();
         if (currentOrder.isPresent() == false){
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "order not found");
         }
-        return currentOrder.get().orderOutcome;
+        return currentOrder.get().getOrderStatus();
     }
 
 
@@ -128,22 +129,21 @@ public class IlpRestService {
 
 
     /**
-     * get the defined boundaries in the system
-     * @return a vector of boundaries
+     * get the central area as a named region
+     * @return the named region for the central area
      */
     @GetMapping(value = {"/centralArea", "/centralarea"})
-    public Boundary[] centralArea() {
-        return new Gson().fromJson(new BufferedReader(new InputStreamReader(Objects.requireNonNull(getClass().getClassLoader().getResourceAsStream("json/centralarea.json")))), Boundary[].class);
-
+    public NamedRegion centralArea() {
+        return new Gson().fromJson(new BufferedReader(new InputStreamReader(Objects.requireNonNull(getClass().getClassLoader().getResourceAsStream("json/centralarea.json")))), NamedRegion.class);
     }
 
     /**
-     * get the defined boundaries in the system
-     * @return a vector of boundaries
+     * get the defined no-fly-zones as named regions
+     * @return a vector of named regions
      */
     @GetMapping(value = {"/noFlyZones", "/noflyzones"})
-    public NoFlyZone[] noFlyZones() {
-        return new Gson().fromJson(new BufferedReader(new InputStreamReader(Objects.requireNonNull(getClass().getClassLoader().getResourceAsStream("json/noflyzones.json")))), NoFlyZone[].class);
+    public NamedRegion[] noFlyZones() {
+        return new Gson().fromJson(new BufferedReader(new InputStreamReader(Objects.requireNonNull(getClass().getClassLoader().getResourceAsStream("json/noflyzones.json")))), NamedRegion[].class);
 
     }
 
